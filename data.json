@@ -1,19 +1,22 @@
 {
-  "family": [
+  "db": [
     {
-      "id": "root",
-      "name": "Leluhur Utama",
+      "id": "100",
+      "name": "Pangkal Keluarga",
       "parentId": null,
       "spouse": "",
-      "bio": "Titik awal silsilah",
-      "phone": "",
-      "photo": ""
+      "wa": "",
+      "addr": "",
+      "bio": "Titik awal silsilah keluarga.",
+      "img": "",
+      "gender": "L",
+      "order": 1
     }
   ],
-  "users": [
+  "usrs": [
     {
-      "username": "1",
-      "pass": "1",
+      "username": "admin",
+      "pass": "admin123",
       "role": "administrator"
     }
   ]
