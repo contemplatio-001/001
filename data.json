@@ -12,8 +12,8 @@
   ],
   "users": [
     {
-      "username": "admin",
-      "pass": "admin123",
+      "username": "1",
+      "pass": "1",
       "role": "administrator"
     }
   ]
