@@ -3,6 +3,6 @@
     { "id": "root", "name": "Leluhur Utama", "parentId": null, "spouse": "", "bio": "Titik awal silsilah", "phone": "", "photo": "" }
   ],
   "users": [
-    { "username": "admin", "pass": "admin123", "role": "administrator" }
+    { "username": "1", "pass": "1", "role": "administrator" }
   ]
 }
