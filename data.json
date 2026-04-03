@@ -1,0 +1,8 @@
+{
+  "family": [
+    { "id": "root", "name": "Leluhur Utama", "parentId": null, "spouse": "", "bio": "Titik awal silsilah", "phone": "", "photo": "" }
+  ],
+  "users": [
+    { "username": "admin", "pass": "admin123", "role": "administrator" }
+  ]
+}
