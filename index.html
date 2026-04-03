@@ -1,0 +1,276 @@
+<script>
+    // --- KONFIGURASI GITHUB ---
+    // Token akan diminta saat pertama kali agar aman, atau Anda bisa mengisinya di sini (tidak disarankan jika repo publik)
+    let GH_TOKEN = localStorage.getItem('gh_token') || "";
+    const GH_OWNER = "USERNAME_GITHUB_ANDA"; // Ganti dengan Username GitHub Anda
+    const GH_REPO = "nasab-cloud"; // Ganti dengan Nama Repo Anda
+    const GH_PATH = "data.json";
+
+    let familyData = [];
+    let systemUsers = [];
+    let currentSha = ""; // Diperlukan GitHub untuk update file
+    let currentUser = null, selectedNodeId = null, currentBase64 = "", currentAction = null, focusNodeId = null;
+
+    // --- ZOOM & PAN LOGIC ---
+    let scale = 0.8, posX = 0, posY = 0;
+    const viewport = document.getElementById('viewport'), wrapper = document.getElementById('tree-wrapper');
+    let isDragging = false, startX, startY;
+
+    viewport.addEventListener('mousedown', e => { if(e.button === 0) { isDragging = true; startX = e.clientX - posX; startY = e.clientY - posY; }});
+    window.addEventListener('mousemove', e => { if (isDragging) { posX = e.clientX - startX; posY = e.clientY - startY; updateTransform(); } });
+    window.addEventListener('mouseup', () => isDragging = false);
+    function updateTransform() { wrapper.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`; }
+    function changeZoom(d) { scale = Math.min(Math.max(0.3, scale + d), 3); updateTransform(); }
+    function resetZoom() { scale = 0.8; posX = (viewport.offsetWidth - wrapper.offsetWidth * scale) / 2; posY = 50; updateTransform(); }
+
+    // --- GITHUB CLOUD SYNC LOGIC ---
+    async function syncWithCloud() {
+        const info = document.getElementById('cloud-info');
+        info.innerText = "(Syncing...)";
+        
+        if(!GH_TOKEN) {
+            GH_TOKEN = prompt("Masukkan GitHub Personal Access Token untuk sinkronisasi:");
+            if(GH_TOKEN) localStorage.setItem('gh_token', GH_TOKEN);
+        }
+
+        try {
+            const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}`, {
+                headers: { "Authorization": `token ${GH_TOKEN}`, "Accept": "application/vnd.github.v3+json" }
+            });
+            
+            if (res.ok) {
+                const d = await res.json();
+                currentSha = d.sha; // Simpan SHA untuk update nanti
+                const content = JSON.parse(atob(d.content));
+                familyData = content.family;
+                systemUsers = content.users;
+                
+                renderTree();
+                info.innerText = "(Cloud Connected)";
+                return true;
+            } else {
+                throw new Error("Gagal akses GitHub");
+            }
+        } catch (e) {
+            console.error(e);
+            info.innerText = "(Offline Mode / Error)";
+            familyData = JSON.parse(localStorage.getItem('nasabData')) || [];
+            systemUsers = JSON.parse(localStorage.getItem('nasabUsers')) || [];
+            return false;
+        }
+    }
+
+    async function pushToCloud() {
+        const info = document.getElementById('cloud-info');
+        info.innerText = "(Saving to Cloud...)";
+
+        const combinedData = { family: familyData, users: systemUsers };
+        const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(combinedData, null, 2))));
+
+        try {
+            const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}`, {
+                method: 'PUT',
+                headers: { 
+                    "Authorization": `token ${GH_TOKEN}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: `Update data by ${currentUser.username}`,
+                    content: contentBase64,
+                    sha: currentSha
+                })
+            });
+
+            if (res.ok) {
+                const d = await res.json();
+                currentSha = d.content.sha; // Update SHA terbaru
+                info.innerText = "(Cloud Connected)";
+            } else {
+                alert("Gagal simpan ke Cloud. Pastikan tidak ada konflik data.");
+            }
+        } catch (e) {
+            console.error("Push Error:", e);
+            info.innerText = "(Simpan Lokal Saja)";
+        }
+    }
+
+    // --- APP FLOW ---
+    async function login() {
+        await syncWithCloud();
+        const u = document.getElementById('username').value.trim(), p = document.getElementById('password').value;
+        const user = systemUsers.find(x => x.username === u && x.pass === p);
+        if (user) { 
+            currentUser = user; 
+            startApp(); 
+        } else { 
+            alert('Login Gagal! Cek Username/Password atau Token GitHub Anda.'); 
+        }
+    }
+
+    function startApp() {
+        document.getElementById('login-page').classList.add('hidden');
+        document.getElementById('main-app').classList.remove('hidden');
+        document.getElementById('role-badge').innerText = currentUser.role.toUpperCase();
+        if(currentUser.role === 'administrator') document.getElementById('admin-only-menu').classList.remove('hidden');
+        goHome();
+    }
+
+    function saveAll() {
+        localStorage.setItem('nasabData', JSON.stringify(familyData));
+        localStorage.setItem('nasabUsers', JSON.stringify(systemUsers));
+        renderTree();
+        pushToCloud(); // Auto push setiap kali ada perubahan
+    }
+
+    // --- RENDER LOGIC ---
+    function renderTree() {
+        const container = document.getElementById('tree-root'), filterVal = document.getElementById('gen-filter').value;
+        updateGenFilter();
+        const rootNode = focusNodeId ? familyData.find(p => p.id === focusNodeId) : familyData.find(p => !p.parentId);
+        if (!rootNode) return;
+        
+        if (filterVal === 'all') { 
+            container.innerHTML = `<ul>${buildTreeHtml(rootNode)}</ul>`; 
+            container.className = "tree"; 
+        } else { 
+            const members = familyData.filter(p => getGeneration(p.id) === parseInt(filterVal));
+            container.innerHTML = `<div class="gen-grid">${members.map(p => `
+                <div class="person-card shadow-sm" onclick="showDetail('${p.id}')" data-id="${p.id}">
+                    <div class="name">${p.name}</div>
+                </div>`).join('')}</div>`; 
+            container.className = ""; 
+        }
+    }
+
+    function buildTreeHtml(person) {
+        const children = familyData.filter(c => c.parentId === person.id);
+        const gen = getGeneration(person.id);
+        return `<li>
+            <div class="person-card shadow-sm" onclick="showDetail('${person.id}')" data-id="${person.id}">
+                <span class="gen-tag">Gen ${gen}</span>
+                <div class="name">${person.name}</div>
+                ${person.spouse ? `<div class="spouse"><i class="fas fa-heart text-danger"></i> ${person.spouse}</div>` : ''}
+            </div>
+            ${children.length > 0 ? `<ul>${children.map(c => buildTreeHtml(c)).join('')}</ul>` : ''}
+        </li>`;
+    }
+
+    // Helper functions (Tetap sama dengan logika Anda)
+    function getGeneration(id) { let level = 1, curr = familyData.find(p => p.id === id); while (curr && curr.parentId) { level++; curr = familyData.find(p => p.id === curr.parentId); } return level; }
+    function getLineagePath(id) { let path = [], curr = familyData.find(p => p.id === id); while (curr) { path.unshift(curr.name); curr = familyData.find(p => p.id === curr.parentId); } return path.join(' &rarr; '); }
+    function updateGenFilter() {
+        const select = document.getElementById('gen-filter');
+        const currentVal = select.value || 'all';
+        let maxGen = 1; familyData.forEach(p => { let g = getGeneration(p.id); if (g > maxGen) maxGen = g; });
+        let html = '<option value="all">Semua Gen</option>';
+        for(let i=1; i<=maxGen; i++) html += `<option value="${i}">Generasi ${i}</option>`;
+        select.innerHTML = html; select.value = currentVal;
+    }
+
+    function showDetail(id) {
+        const p = familyData.find(x => x.id === id); if (!p) return;
+        selectedNodeId = id;
+        document.getElementById('detName').innerText = p.name;
+        document.getElementById('detSpouse').innerHTML = p.spouse ? `Pasangan: <span class="fw-normal">${p.spouse}</span>` : "";
+        document.getElementById('detGen').innerText = getGeneration(id);
+        document.getElementById('detChildren').innerText = familyData.filter(x => x.parentId === id).length;
+        document.getElementById('detImg').src = p.photo || "https://via.placeholder.com/100";
+        document.getElementById('detBio').innerText = p.bio || "Tidak ada biografi.";
+        document.getElementById('detLineage').innerHTML = getLineagePath(id);
+        
+        const contact = document.getElementById('contact-area');
+        if (p.phone) { 
+            let wa = p.phone.toString().replace(/\D/g, ''); 
+            if(wa.startsWith('0')) wa = '62' + wa.slice(1); 
+            contact.innerHTML = `<a href="https://wa.me/${wa}" target="_blank" class="btn btn-success btn-sm w-100 fw-bold rounded-pill"><i class="fab fa-whatsapp"></i> CHAT WA</a>`; 
+        } else { contact.innerHTML = ""; }
+        
+        new bootstrap.Modal(document.getElementById('detailModal')).show();
+    }
+
+    function handleMenuAction(type) {
+        currentAction = type;
+        const nodeModal = new bootstrap.Modal(document.getElementById('nodeModal'));
+        if (type === 'delete') {
+            if (selectedNodeId === 'root') return alert('Root tidak bisa dihapus');
+            if (confirm('Hapus orang ini dan semua keturunannya secara permanen dari Cloud?')) {
+                let idsToDelete = [selectedNodeId];
+                let i = 0;
+                while(i < idsToDelete.length) {
+                    let pid = idsToDelete[i];
+                    familyData.filter(p => p.parentId === pid).forEach(c => idsToDelete.push(c.id));
+                    i++;
+                }
+                familyData = familyData.filter(p => !idsToDelete.includes(p.id));
+                saveAll();
+            }
+            return;
+        }
+        document.getElementById('extended-fields').classList.toggle('hidden', type === 'spouse');
+        const imgPreview = document.getElementById('img-preview');
+        if (type === 'edit') {
+            const p = familyData.find(x => x.id === selectedNodeId);
+            document.getElementById('inputName').value = p.name; 
+            document.getElementById('inputPhone').value = p.phone || ""; 
+            document.getElementById('inputBio').value = p.bio || "";
+            currentBase64 = p.photo || "";
+            imgPreview.src = currentBase64;
+            imgPreview.style.display = currentBase64 ? "inline-block" : "none";
+        } else {
+            document.getElementById('inputName').value = ""; 
+            document.getElementById('inputPhone').value = ""; 
+            document.getElementById('inputBio').value = ""; 
+            currentBase64 = ""; 
+            imgPreview.style.display = "none";
+        }
+        nodeModal.show();
+    }
+
+    function saveData() {
+        const n = document.getElementById('inputName').value.trim();
+        const ph = document.getElementById('inputPhone').value;
+        const bi = document.getElementById('inputBio').value;
+        if(!n) return alert('Nama harus diisi!');
+        
+        if (currentAction === 'edit') { 
+            const p = familyData.find(x => x.id === selectedNodeId); 
+            if(p) { p.name = n; p.phone = ph; p.bio = bi; p.photo = currentBase64; } 
+        } else if (currentAction === 'child') { 
+            familyData.push({ id: Date.now().toString(), name: n, parentId: selectedNodeId, spouse: "", bio: bi, phone: ph, photo: currentBase64 }); 
+        } else if (currentAction === 'spouse') { 
+            const p = familyData.find(x => x.id === selectedNodeId); 
+            if(p) { p.spouse = n; } 
+        }
+        saveAll(); 
+        bootstrap.Modal.getInstance(document.getElementById('nodeModal')).hide();
+    }
+
+    // --- USER MANAGEMENT (Admin Only) ---
+    function openUserManagement() { renderUserTable(); new bootstrap.Modal(document.getElementById('userManagementModal')).show(); }
+    function renderUserTable() { document.getElementById('user-table-body').innerHTML = systemUsers.map(u => `<tr><td>${u.username}</td><td>${u.role}</td><td><button class="btn btn-sm btn-primary" onclick="openUserForm('edit','${u.username}')">Edit</button></td></tr>`).join(''); }
+    function openUserForm(m, un='') { /* Logika form user */ }
+    function previewFile() { 
+        const file = document.getElementById('inputPhoto').files[0], reader = new FileReader(); 
+        reader.onloadend = () => { currentBase64 = reader.result; document.getElementById('img-preview').src = reader.result; document.getElementById('img-preview').style.display = "inline-block"; }; 
+        if (file) reader.readAsDataURL(file); 
+    }
+
+    function goHome() { focusNodeId = null; document.getElementById('gen-filter').value = 'all'; renderTree(); setTimeout(resetZoom, 200); }
+    function setFocusTree() { focusNodeId = selectedNodeId; bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide(); renderTree(); resetZoom(); }
+    function logout() { currentUser = null; location.reload(); }
+
+    // --- CONTEXT MENU ---
+    const menu = document.getElementById('custom-menu');
+    window.addEventListener('contextmenu', e => {
+        const card = e.target.closest('.person-card');
+        if (card && currentUser) { 
+            e.preventDefault(); 
+            selectedNodeId = card.getAttribute('data-id'); 
+            const role = currentUser.role; 
+            document.getElementById('group-staff').classList.toggle('hidden', role === 'viewer');
+            document.getElementById('group-admin-only').classList.toggle('hidden', role !== 'administrator');
+            menu.style.display = 'block'; menu.style.left = e.pageX + 'px'; menu.style.top = e.pageY + 'px'; 
+        } else { menu.style.display = 'none'; }
+    });
+    window.addEventListener('click', () => menu.style.display = 'none');
+</script>
