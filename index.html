@@ -3,256 +3,276 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nasab Pro - Ultra Stable Cloud</title>
+    <title>Nasab Pro - Cloud Family Tree</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --primary: #1a5276; --secondary: #2980b9; --bg: #f4f7fb; }
-        body { background: var(--bg); font-family: sans-serif; margin: 0; overflow: hidden; height: 100vh; }
-        #login-page { height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--primary); position: fixed; width: 100%; z-index: 9999; }
-        .login-card { width: 90%; max-width: 360px; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
-        .hidden { display: none !important; }
-        .viewport { width: 100vw; height: calc(100vh - 60px); overflow: hidden; position: relative; background: #eef2f7; cursor: grab; }
-        .tree-wrapper { position: absolute; transform-origin: 0 0; padding: 100px; display: inline-block; }
-        .tree ul { padding-top: 20px; position: relative; display: flex; justify-content: center; padding-left: 0; }
-        .tree li { list-style-type: none; position: relative; padding: 20px 5px 0 5px; text-align: center; }
-        .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 2px solid #3498db; width: 50%; height: 20px; }
+        :root { --primary: #1a5276; --secondary: #2980b9; --accent: #d4e6f1; --bg: #f8f9fa; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; background: var(--bg); overflow: hidden; }
+
+        /* ============================ */
+        /* HALAMAN DEPAN (FRONT/LOGIN)  */
+        /* ============================ */
+        #front-page { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex; align-items: center; justify-content: center; z-index: 9999; transition: 0.8s cubic-bezier(0.85, 0, 0.15, 1);
+        }
+        .login-box { 
+            background: white; padding: 40px; border-radius: 30px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3); width: 100%; max-width: 400px; text-align: center;
+        }
+        .login-box i { color: var(--primary); margin-bottom: 20px; }
+        .form-control { border-radius: 10px; padding: 12px; border: 1px solid #ddd; }
+        .btn-login { background: var(--primary); color: white; font-weight: bold; border-radius: 10px; padding: 12px; border: none; width: 100%; }
+        .btn-login:hover { background: var(--secondary); color: white; }
+
+        /* ============================ */
+        /* HALAMAN DALAM (END/APP)      */
+        /* ============================ */
+        #end-page { display: none; height: 100vh; flex-direction: column; }
+        .navbar { background: var(--primary); color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .viewport { flex: 1; position: relative; background: #eef2f7; overflow: hidden; cursor: grab; }
+        .tree-wrapper { position: absolute; transform-origin: 0 0; padding: 150px; display: inline-block; transition: transform 0.1s ease-out; }
+
+        /* Tree Styling */
+        .tree ul { padding-top: 25px; position: relative; display: flex; justify-content: center; padding-left: 0; }
+        .tree li { list-style-type: none; position: relative; padding: 25px 5px 0 5px; text-align: center; }
+        .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 2px solid #3498db; width: 50%; height: 25px; }
         .tree li::after { right: auto; left: 50%; border-left: 2px solid #3498db; }
         .tree li:only-child::after, .tree li:only-child::before { display: none; }
         .tree li:only-child { padding-top: 0; }
         .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
         .tree li:last-child::before { border-right: 2px solid #3498db; border-radius: 0 5px 0 0; }
         .tree li:first-child::after { border-radius: 5px 0 0 0; }
-        .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 2px solid #3498db; width: 0; height: 20px; }
-        .person-card { border: 2px solid #3498db; padding: 10px; border-radius: 10px; background: white; min-width: 140px; display: inline-block; }
+        .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 2px solid #3498db; width: 0; height: 25px; }
+
+        .person-card { 
+            background: white; border: 2px solid #3498db; padding: 12px; border-radius: 15px; 
+            min-width: 160px; display: inline-block; position: relative; z-index: 10; transition: 0.3s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .person-card:hover { transform: scale(1.05); border-color: var(--secondary); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
         .name { font-weight: bold; color: var(--primary); font-size: 14px; }
-        #diag-log { font-size: 10px; background: #222; color: #0f0; padding: 10px; border-radius: 8px; margin-top: 15px; text-align: left; max-height: 100px; overflow-y: auto; font-family: monospace; }
-        #custom-menu { position: absolute; display: none; z-index: 10000; background: white; border-radius: 8px; box-shadow: 0 5px 25px rgba(0,0,0,0.2); overflow: hidden; min-width: 160px; }
-        .menu-item { padding: 12px 15px; cursor: pointer; border: none; background: none; width: 100%; text-align: left; font-size: 14px; }
-        .menu-item:hover { background: #f8f9fa; }
+        .spouse { font-size: 11px; color: #e74c3c; margin-top: 5px; padding-top: 5px; border-top: 1px dashed #eee; font-style: italic; }
+
+        /* HUD & Menu */
+        .controls { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column; gap: 10px; }
+        .btn-round { width: 50px; height: 50px; border-radius: 50%; border: none; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.2); font-size: 20px; color: var(--primary); }
+        
+        #context-menu { 
+            position: absolute; display: none; background: white; border-radius: 12px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden; z-index: 10000; min-width: 180px; 
+        }
+        .menu-item { padding: 12px 20px; cursor: pointer; border: none; background: none; width: 100%; text-align: left; font-size: 14px; }
+        .menu-item:hover { background: #f0f7ff; color: var(--secondary); }
+
+        .hidden { display: none !important; }
+        #diag-log { background: #000; color: #0f0; font-family: monospace; font-size: 10px; padding: 10px; border-radius: 10px; margin-top: 20px; text-align: left; max-height: 80px; overflow-y: auto; }
     </style>
 </head>
 <body>
 
-<div id="login-page">
-    <div class="login-card">
-        <h4 class="fw-bold text-primary">NASAB PRO</h4>
-        <p class="text-muted small">Cloud Genealogy System</p>
-        <div class="text-start mt-4">
-            <input type="text" id="app-user" class="form-control mb-2 rounded-pill px-3" placeholder="Username (admin)">
-            <input type="password" id="app-pass" class="form-control mb-3 rounded-pill px-3" placeholder="Password (admin123)">
-            <button id="btn-login" class="btn btn-primary w-100 rounded-pill fw-bold mb-2" onclick="attemptLogin()">LOGIN</button>
-            <button class="btn btn-outline-secondary btn-sm w-100 rounded-pill" onclick="toggleSetup(true)">KONFIGURASI CLOUD</button>
+<!-- ============================ -->
+<!-- FRONT PAGE (LOGIN)           -->
+<!-- ============================ -->
+<div id="front-page">
+    <div class="login-box shadow-lg">
+        <i class="fas fa-sitemap fa-4x"></i>
+        <h3 class="fw-bold text-primary mb-1">NASAB PRO</h3>
+        <p class="text-muted small mb-4">Silsilah Keluarga berbasis Cloud</p>
+        
+        <div class="text-start">
+            <input type="text" id="user" class="form-control mb-2" placeholder="Username (admin)">
+            <input type="password" id="pass" class="form-control mb-3" placeholder="Password (admin123)">
+            <button class="btn-login shadow" onclick="doLogin()">MASUK SISTEM</button>
+            <button class="btn btn-link btn-sm w-100 mt-2 text-decoration-none" onclick="toggleSetup(true)">Setup Cloud</button>
         </div>
-        <div id="diag-log">Sistem Siap.</div>
+
+        <div id="diag-log">Siap menghubungkan...</div>
     </div>
 </div>
 
-<div id="app-content" class="hidden">
-    <nav class="navbar navbar-dark bg-primary px-3 shadow-sm">
-        <span class="navbar-brand fw-bold">NasabCloud</span>
-        <button class="btn btn-sm btn-light rounded-circle" onclick="location.reload()"><i class="fas fa-power-off"></i></button>
+<!-- ============================ -->
+<!-- END PAGE (DASHBOARD)         -->
+<!-- ============================ -->
+<div id="end-page">
+    <nav class="navbar">
+        <span class="fw-bold fs-5"><i class="fas fa-cloud me-2"></i>NasabCloud</span>
+        <div>
+            <span id="role-tag" class="badge bg-light text-primary me-3">ADMIN</span>
+            <button class="btn btn-sm btn-outline-light rounded-circle" onclick="location.reload()"><i class="fas fa-power-off"></i></button>
+        </div>
     </nav>
+
     <div class="viewport" id="viewport">
-        <div class="tree-wrapper" id="tree-wrapper"><div id="tree-root" class="tree"></div></div>
+        <div class="tree-wrapper" id="tree-wrapper">
+            <div id="tree-root" class="tree"></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-round" onclick="zoom(0.2)"><i class="fas fa-plus"></i></button>
+        <button class="btn-round" onclick="zoom(-0.2)"><i class="fas fa-minus"></i></button>
+        <button class="btn-round" onclick="resetZoom()"><i class="fas fa-expand"></i></button>
     </div>
 </div>
 
-<!-- MODAL KONFIGURASI -->
-<div id="setup-overlay" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:10001; display:flex; align-items:center; justify-content:center;">
-    <div class="bg-white p-4 rounded-4 shadow" style="width:90%; max-width:350px;">
-        <h6 class="fw-bold mb-3">KONFIGURASI GITHUB CLOUD</h6>
-        <div class="alert alert-warning p-2 small">Gunakan hanya nama User & Repo saja.</div>
-        <input type="text" id="gh-owner" class="form-control mb-2" placeholder="GitHub Username (Contoh: budinasab)">
-        <input type="text" id="gh-repo" class="form-control mb-2" placeholder="Nama Repo (Contoh: silsilah)">
-        <input type="password" id="gh-token" class="form-control mb-3" placeholder="GitHub Token (ghp_...)">
-        <button class="btn btn-primary w-100 mb-2 rounded-pill" onclick="saveCloudConfig()">SIMPAN</button>
-        <button class="btn btn-light w-100 rounded-pill border" onclick="toggleSetup(false)">BATAL</button>
+<!-- OVERLAY SETUP CLOUD -->
+<div id="setup-modal" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; display:flex; align-items:center; justify-content:center;">
+    <div class="bg-white p-4 rounded-4 shadow" style="width:90%; max-width:380px;">
+        <h6 class="fw-bold mb-3"><i class="fab fa-github me-2"></i>PENGATURAN GITHUB</h6>
+        <div class="mb-2"><label class="small">GitHub Username:</label><input type="text" id="gh-owner" class="form-control" placeholder="Contoh: budinasab"></div>
+        <div class="mb-2"><label class="small">Nama Repository:</label><input type="text" id="gh-repo" class="form-control" placeholder="Contoh: silsilah"></div>
+        <div class="mb-3"><label class="small">Token (ghp_...):</label><input type="password" id="gh-token" class="form-control" placeholder="GitHub Token"></div>
+        <button class="btn btn-primary w-100 rounded-3 mb-2" onclick="saveConfig()">SIMPAN KONFIGURASI</button>
+        <button class="btn btn-light w-100 rounded-3 border" onclick="toggleSetup(false)">TUTUP</button>
     </div>
 </div>
 
 <!-- CONTEXT MENU -->
-<div id="custom-menu">
-    <button class="menu-item" onclick="openNodeModal('child')"><i class="fas fa-plus me-2"></i>Tambah Anak</button>
-    <button class="menu-item" onclick="openNodeModal('edit')"><i class="fas fa-edit me-2"></i>Edit Data</button>
-    <button class="menu-item text-danger" onclick="deleteNode()"><i class="fas fa-trash me-2"></i>Hapus</button>
+<div id="context-menu">
+    <button class="menu-item" onclick="action('child')"><i class="fas fa-plus me-2 text-primary"></i>Tambah Anak</button>
+    <button class="menu-item" onclick="action('edit')"><i class="fas fa-edit me-2 text-success"></i>Edit Data</button>
+    <button class="menu-item text-danger" onclick="action('delete')"><i class="fas fa-trash me-2"></i>Hapus Data</button>
 </div>
 
-<!-- DATA MODAL -->
-<div class="modal fade" id="dataModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content"><div class="modal-body text-center">
-    <h6 id="modalTitle" class="fw-bold mb-3">Data Silsilah</h6>
+<!-- MODAL INPUT DATA -->
+<div class="modal fade" id="dataModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-body">
+    <h6 id="modalTitle" class="fw-bold mb-3">Update Silsilah</h6>
     <input type="text" id="inp-name" class="form-control mb-2" placeholder="Nama Lengkap">
     <input type="text" id="inp-spouse" class="form-control mb-3" placeholder="Nama Pasangan">
-    <button class="btn btn-primary w-100 rounded-pill fw-bold" onclick="saveData()">SIMPAN</button>
+    <button class="btn btn-primary w-100 rounded-pill fw-bold" onclick="saveData()">SIMPAN DATA</button>
 </div></div></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    let db = { family: [], users: [] }, sha = "", selectedId = null, mode = "";
-    
+    let db = { family: [], users: [] }, sha = "", selectedId = null, currentMode = "";
+
     function log(m) {
         const el = document.getElementById('diag-log');
-        el.innerHTML += `<br>> ${m}`;
-        el.scrollTop = el.scrollHeight;
+        el.innerHTML += `<br>> ${m}`; el.scrollTop = el.scrollHeight;
     }
 
-    // Pembersihan URL Otomatis
-    function cleanInput(val) {
-        return val.replace(/https:\/\/github.com\//, '').replace(/\/$/, '').trim();
-    }
+    // --- END LOGIC (GITHUB HANDLER) ---
+    async function doLogin() {
+        const u = document.getElementById('user').value, p = document.getElementById('pass').value;
+        const owner = localStorage.getItem('ns_owner'), repo = localStorage.getItem('ns_repo'), token = localStorage.getItem('ns_token');
 
-    async function attemptLogin() {
-        const btn = document.getElementById('btn-login');
-        const owner = cleanInput(localStorage.getItem('nb_owner') || '');
-        const repo = cleanInput(localStorage.getItem('nb_repo') || '');
-        const token = (localStorage.getItem('nb_token') || '').trim();
+        if(!owner || !token) return alert("Silahkan klik Setup Cloud dulu!");
 
-        if(!owner || !repo || !token) return alert("Buka KONFIGURASI CLOUD dan isi data dengan benar!");
-
-        btn.disabled = true;
-        log("Mencoba koneksi...");
-
-        const url = `https://api.github.com/repos/${owner}/${repo}/contents/data.json`;
-        log(`URL: ${url}`);
-
+        log("Menghubungi Cloud GitHub...");
         try {
-            const res = await fetch(url, {
-                method: 'GET',
-                headers: { 
-                    "Authorization": `Bearer ${token}`,
-                    "Accept": "application/vnd.github.v3+json"
-                }
-            });
-
+            const url = `https://api.github.com/repos/${owner}/${repo}/contents/data.json`;
+            const res = await fetch(url, { headers: { "Authorization": `token ${token}`, "Cache-Control": "no-cache" } });
+            
             if(res.ok) {
                 const data = await res.json();
                 sha = data.sha;
-                const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
-                db = content;
+                db = JSON.parse(decodeURIComponent(escape(atob(data.content))));
                 
-                const u = document.getElementById('app-user').value;
-                const p = document.getElementById('app-pass').value;
-                const user = db.users.find(x => x.username === u && x.pass === p);
-
-                if(user) {
+                const validUser = db.users.find(x => x.username === u && x.pass === p);
+                if(validUser) {
                     log("Login Berhasil!");
-                    document.getElementById('login-page').classList.add('hidden');
-                    document.getElementById('app-content').classList.remove('hidden');
-                    renderTree();
-                } else {
-                    log("User/Pass Salah.");
-                    alert("Username atau Password Salah!");
-                }
+                    document.getElementById('front-page').style.transform = "translateY(-100%)";
+                    setTimeout(() => {
+                        document.getElementById('front-page').style.display = "none";
+                        document.getElementById('end-page').style.display = "flex";
+                        document.getElementById('role-tag').innerText = validUser.role.toUpperCase();
+                        renderTree();
+                    }, 600);
+                } else alert("Username atau Password salah!");
             } else {
-                const errJson = await res.json();
-                log(`Error ${res.status}: ${errJson.message}`);
-                alert(`GitHub Menolak Koneksi (${res.status}): ${errJson.message}`);
+                alert(`Koneksi Gagal (${res.status}). Cek kembali Setup Cloud.`);
             }
-        } catch (e) {
-            log(`CRITICAL ERROR: ${e.message}`);
-            alert("GAGAL TOTAL: Browser tidak bisa menghubungi GitHub. Periksa koneksi internet atau matikan VPN/AdBlocker.");
-        } finally { btn.disabled = false; }
+        } catch (e) { log("Error Fetch: " + e.message); }
     }
 
-    async function pushCloud() {
-        const owner = cleanInput(localStorage.getItem('nb_owner'));
-        const repo = cleanInput(localStorage.getItem('nb_repo'));
-        const token = localStorage.getItem('nb_token').trim();
+    async function syncCloud() {
+        const owner = localStorage.getItem('ns_owner'), repo = localStorage.getItem('ns_repo'), token = localStorage.getItem('ns_token');
         const content = btoa(unescape(encodeURIComponent(JSON.stringify(db))));
-        
         try {
             const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/data.json`, {
                 method: 'PUT',
-                headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-                body: JSON.stringify({ message: "Update Silsilah", content, sha })
+                headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ message: "Update via NasabPro", content, sha })
             });
-            if(res.ok) {
-                const data = await res.json();
-                sha = data.content.sha;
-                log("Data Cloud Diperbarui.");
-            }
-        } catch (e) { log("Gagal Upload: " + e.message); }
+            if(res.ok) { const d = await res.json(); sha = d.content.sha; }
+        } catch (e) { alert("Cloud Gagal Update!"); }
     }
 
+    // --- FRONT LOGIC (UI HANDLER) ---
     function renderTree() {
         const root = db.family.find(p => !p.parentId);
         if(!root) return;
-        document.getElementById('tree-root').innerHTML = `<ul>${buildNode(root)}</ul>`;
+        document.getElementById('tree-root').innerHTML = `<ul>${drawNode(root)}</ul>`;
+        setTimeout(resetZoom, 200);
     }
 
-    function buildNode(p) {
+    function drawNode(p) {
         const kids = db.family.filter(c => c.parentId === p.id);
         return `<li>
-            <div class="person-card" data-id="${p.id}">
+            <div class="person-card shadow-sm" data-id="${p.id}">
                 <div class="name">${p.name}</div>
-                ${p.spouse ? `<div class="spouse" style="font-size:11px;color:red;">${p.spouse}</div>` : ''}
+                ${p.spouse ? `<div class="spouse">${p.spouse}</div>` : ''}
             </div>
-            ${kids.length > 0 ? `<ul>${kids.map(k => buildNode(k)).join('')}</ul>` : ''}
+            ${kids.length > 0 ? `<ul>${kids.map(k => drawNode(k)).join('')}</ul>` : ''}
         </li>`;
     }
 
-    // Navigation & Interaction
-    let s = 0.8, x = 0, y = 50;
-    const vp = document.getElementById('viewport'), wr = document.getElementById('tree-wrapper');
-    const update = () => wr.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
-    vp.onmousedown = (e) => { 
-        let sx = e.clientX - x, sy = e.clientY - y;
-        window.onmousemove = (me) => { x = me.clientX - sx; y = me.clientY - sy; update(); };
-        window.onmouseup = () => window.onmousemove = null;
-    };
+    // Interaction & Navigation
+    let sc = 0.8, tx = 0, ty = 50;
+    const view = document.getElementById('viewport'), wrap = document.getElementById('tree-wrapper');
+    const updateV = () => wrap.style.transform = `translate(${tx}px, ${ty}px) scale(${sc})`;
+    function zoom(d) { sc += d; updateV(); }
+    function resetZoom() { sc = 0.8; tx = (view.offsetWidth - wrap.offsetWidth*sc)/2; ty = 50; updateV(); }
+    
+    let isD = false, sx, sy;
+    view.onmousedown = (e) => { isD = true; sx = e.clientX - tx; sy = e.clientY - ty; view.style.cursor = 'grabbing'; };
+    window.onmousemove = (e) => { if(isD) { tx = e.clientX - sx; ty = e.clientY - sy; updateV(); } };
+    window.onmouseup = () => { isD = false; view.style.cursor = 'grab'; };
 
-    function openNodeModal(m) {
-        mode = m; const p = db.family.find(x => x.id === selectedId);
-        document.getElementById('inp-name').value = (m==='edit') ? p.name : "";
-        document.getElementById('inp-spouse').value = (m==='edit') ? (p.spouse||"") : "";
-        new bootstrap.Modal(document.getElementById('dataModal')).show();
-    }
-
-    function saveData() {
-        const n = document.getElementById('inp-name').value;
-        const sp = document.getElementById('inp-spouse').value;
-        if(mode === 'edit') {
-            const p = db.family.find(x => x.id === selectedId);
-            p.name = n; p.spouse = sp;
-        } else {
-            db.family.push({ id: Date.now().toString(), name: n, spouse: sp, parentId: selectedId });
-        }
-        bootstrap.Modal.getInstance(document.getElementById('dataModal')).hide();
-        renderTree(); pushCloud();
-    }
-
-    function deleteNode() {
-        if(confirm("Hapus data?")) {
-            db.family = db.family.filter(p => p.id !== selectedId);
-            renderTree(); pushCloud();
-        }
-    }
-
-    const cm = document.getElementById('custom-menu');
+    // Context Menu & Actions
+    const cm = document.getElementById('context-menu');
     window.oncontextmenu = (e) => {
         const card = e.target.closest('.person-card');
         if(card) {
             e.preventDefault(); selectedId = card.dataset.id;
-            cm.style.display = 'block'; cm.style.left = e.pageX+'px'; cm.style.top = e.pageY+'px';
+            cm.style.display = 'block'; cm.style.left = e.pageX + 'px'; cm.style.top = e.pageY + 'px';
         } else cm.style.display = 'none';
     };
     window.onclick = () => cm.style.display = 'none';
 
-    function toggleSetup(v) {
-        document.getElementById('setup-overlay').classList.toggle('hidden', !v);
-        if(v) {
-            document.getElementById('gh-owner').value = localStorage.getItem('nb_owner') || "";
-            document.getElementById('gh-repo').value = localStorage.getItem('nb_repo') || "";
-            document.getElementById('gh-token').value = localStorage.getItem('nb_token') || "";
+    function action(m) {
+        currentMode = m; const p = db.family.find(x => x.id === selectedId);
+        if(m === 'delete') {
+            if(confirm("Hapus data?")) { db.family = db.family.filter(x => x.id !== selectedId); renderTree(); syncCloud(); }
+            return;
         }
+        document.getElementById('inp-name').value = (m === 'edit') ? p.name : "";
+        document.getElementById('inp-spouse').value = (m === 'edit') ? (p.spouse||"") : "";
+        new bootstrap.Modal(document.getElementById('dataModal')).show();
     }
 
-    function saveCloudConfig() {
-        localStorage.setItem('nb_owner', document.getElementById('gh-owner').value.trim());
-        localStorage.setItem('nb_repo', document.getElementById('gh-repo').value.trim());
-        localStorage.setItem('nb_token', document.getElementById('gh-token').value.trim());
-        toggleSetup(false);
-        location.reload();
+    function saveData() {
+        const n = document.getElementById('inp-name').value, s = document.getElementById('inp-spouse').value;
+        if(currentMode === 'edit') {
+            const p = db.family.find(x => x.id === selectedId);
+            p.name = n; p.spouse = s;
+        } else {
+            db.family.push({ id: Date.now().toString(), name: n, spouse: s, parentId: selectedId });
+        }
+        bootstrap.Modal.getInstance(document.getElementById('dataModal')).hide();
+        renderTree(); syncCloud();
+    }
+
+    // Config Handler
+    function toggleSetup(v) { document.getElementById('setup-modal').classList.toggle('hidden', !v); }
+    function saveConfig() {
+        localStorage.setItem('ns_owner', document.getElementById('gh-owner').value.trim());
+        localStorage.setItem('ns_repo', document.getElementById('gh-repo').value.trim());
+        localStorage.setItem('ns_token', document.getElementById('gh-token').value.trim());
+        toggleSetup(false); alert("Konfigurasi disimpan!");
     }
 </script>
 </body>
